@@ -1,0 +1,11 @@
+{
+  "osc_address": "127.0.0.1",
+  "osc_port": 9000,
+  "language": "zh-CN",
+  "http_port": 8780,
+  "ws_port": 8781,
+  "auto_open_browser": false,
+  "silence_stop_sec": 4.0,
+  "final_hold_sec": 10.0,
+  "voice_threshold": 0.02
+}

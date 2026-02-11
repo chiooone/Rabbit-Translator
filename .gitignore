@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+app.log
+browser_profile/
+build/
+dist/
+share/
+share.zip
+*.spec
+build.bat
+README_LOCAL.md

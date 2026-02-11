@@ -1,0 +1,1413 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rabbit Translator 1.0.0</title>
+    <link rel="icon" href="icon.png" />
+    <style>
+      :root {
+        --bg: #fff5f7;
+        --panel: #ffffff;
+        --accent: #ff7aa2;
+        --muted: #9b6b7a;
+        --text: #5b2c3f;
+        --warn: #f6a85f;
+        --error: #e11d48;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html, body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Noto Sans SC", sans-serif;
+        background: radial-gradient(circle at 20% 20%, #ffe4ee, #fff5f7 45%);
+        color: var(--text);
+        overflow: hidden;
+      }
+      #snapRoot {
+        height: 100vh;
+        overflow-y: auto;
+        scroll-snap-type: y mandatory;
+        scroll-behavior: smooth;
+      }
+      .page {
+        min-height: 100vh;
+        height: 100vh;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+      }
+      .wrap {
+        max-width: 960px;
+        margin: 24px auto 48px;
+        padding: 0 16px;
+        min-height: calc(100vh - 72px);
+        height: calc(100vh - 72px);
+        display: flex;
+        flex-direction: column;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 8px 0 16px;
+      }
+      .ui-lang {
+        width: 180px;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 8px 0 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        align-items: stretch;
+        flex: 1;
+        min-height: 0;
+        height: 100%;
+      }
+      .grid > .card {
+        height: 100%;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid #f5c2d1;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 12px 30px rgba(252, 165, 197, 0.22);
+        min-height: 0;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input, select, button {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #f5c2d1;
+        background: #fff0f5;
+        color: var(--text);
+      }
+      button {
+        cursor: pointer;
+        background: #ffd2e1;
+        transition: all 0.15s ease;
+      }
+      button:hover {
+        background: #ffc2d6;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+      }
+      .row > * {
+        flex: 1;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .actions button {
+        flex: 1;
+        font-weight: 600;
+      }
+      .start {
+        background: var(--accent);
+        color: #fff;
+      }
+      .start:hover {
+        background: #ff5b8c;
+      }
+      .stop {
+        background: var(--warn);
+        color: #7a3c00;
+      }
+      .log {
+        font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        max-height: 260px;
+        overflow: auto;
+        background: #fff7fb;
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid #f5c2d1;
+      }
+      .log-fill {
+        flex: 1;
+        max-height: none;
+        min-height: 0;
+        overflow-y: auto;
+      }
+      .card--right {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+      }
+      .live-box {
+        height: 44px;
+      }
+      .output-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .chat {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        flex: 1;
+        min-height: 0;
+        height: 100%;
+        max-height: none;
+        overflow: auto;
+        background: #fff7fb;
+        border-radius: 12px;
+        padding: 12px;
+        border: 1px solid #f5c2d1;
+      }
+      .bubble {
+        align-self: flex-start;
+        background: #ffffff;
+        border: 1px solid #f5c2d1;
+        border-radius: 16px 16px 16px 6px;
+        padding: 10px 12px;
+        box-shadow: 0 8px 18px rgba(252, 165, 197, 0.22);
+        color: #5b2c3f;
+        line-height: 1.4;
+      }
+      .bubble--blocked {
+        border-color: #ff5b7f;
+        box-shadow: 0 0 16px rgba(255, 91, 127, 0.65);
+        background: #fff1f5;
+      }
+      .bubble-meta {
+        font-size: 11px;
+        color: #b34b63;
+        margin-bottom: 6px;
+      }
+      .bubble-time {
+        font-size: 11px;
+        color: #b98a97;
+        margin-bottom: 6px;
+      }
+      .meter-wrap {
+        position: relative;
+        width: 100%;
+      }
+      .meter-bar {
+        position: relative;
+        width: 100%;
+        height: 14px;
+        background: #ffe8f2;
+        border-radius: 999px;
+        border: 1px solid #f5c2d1;
+        overflow: hidden;
+      }
+      .meter-fill {
+        height: 100%;
+        width: 0%;
+        background: #ff7aa2;
+      }
+      .meter-marker {
+        position: absolute;
+        top: -2px;
+        width: 2px;
+        height: 18px;
+        background: #d94677;
+      }
+      .meter-range {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 14px;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .meter-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #ffe4ee;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .error {
+        color: var(--error);
+      }
+      @media (max-width: 720px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="snapRoot">
+      <section class="page">
+        <div class="wrap">
+          <div class="topbar">
+            <h1 data-i18n="title_main">Rabbit Translator</h1>
+            <div class="ui-lang">
+              <select id="uiLang">
+                <option value="zh-CN">中文（普通话）</option>
+                <option value="zh-TW">中文（繁体）</option>
+                <option value="en-US">English (US)</option>
+                <option value="ja-JP">日本語</option>
+                <option value="ko-KR">한국어</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid">
+            <div class="card">
+          <div class="row">
+            <div>
+              <label data-i18n="osc_address">OSC 地址</label>
+              <input id="oscAddress" type="text" />
+            </div>
+            <div>
+              <label data-i18n="osc_port">OSC 端口</label>
+              <input id="oscPort" type="number" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label data-i18n="recog_lang">识别语言</label>
+              <select id="lang">
+                <option value="zh-CN">中文（普通话）</option>
+                <option value="zh-TW">中文（繁体）</option>
+                <option value="en-US">English (US)</option>
+                <option value="ja-JP">日本語</option>
+                <option value="ko-KR">한국어</option>
+              </select>
+            </div>
+            <div>
+              <label data-i18n="ws_port">WebSocket 端口</label>
+              <input id="wsPort" type="number" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label data-i18n="silence_stop">静音停止（秒）</label>
+              <input id="silenceStop" type="number" min="0" step="0.5" />
+            </div>
+            <div>
+              <label data-i18n="final_hold">最终文本停留（秒）</label>
+              <input id="finalHold" type="number" min="0" step="0.5" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label data-i18n="input_level">输入音量</label>
+              <div class="meter-wrap">
+                <div class="meter-bar">
+                  <div id="voiceMeter" class="meter-fill"></div>
+                  <div id="thresholdMarker" class="meter-marker"></div>
+                  <input id="voiceThreshold" class="meter-range" type="range" min="0" max="100" step="0.5" />
+                </div>
+                <div class="meter-meta">
+                  <span><span data-i18n="threshold_label">阈值：</span><span id="thresholdValue">2%</span></span>
+                  <span><span data-i18n="current_label">当前：</span><span id="rmsValue">0%</span></span>
+                </div>
+              </div>
+            </div>
+            <div></div>
+          </div>
+          <div class="actions">
+            <button id="startBtn" class="start" data-i18n="start">开始</button>
+            <button id="stopBtn" class="stop" disabled data-i18n="stop">停止</button>
+          </div>
+          <div style="margin-top: 12px;">
+            <label>
+              <input id="sendInterim" type="checkbox" checked style="width: auto; margin-right: 8px;" />
+              <span data-i18n="send_realtime">发送实时文本到 VRChat（每秒 1 次）</span>
+            </label>
+          </div>
+          <div style="margin-top: 8px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center;">
+              <input id="sessionSound" type="checkbox" style="width: auto; margin-right: 8px;" />
+              <span data-i18n="session_sound">开启会话提示音</span>
+            </label>
+            <label style="display: flex; align-items: center;">
+              <input id="keepPunct" type="checkbox" checked style="width: auto; margin-right: 8px;" />
+              <span data-i18n="keep_punct">保留句末标点</span>
+            </label>
+          </div>
+          <p class="badge" id="statusBadge">状态：已关闭</p>
+        </div>
+            <div class="card card--right">
+          <label data-i18n="live_text">实时文本</label>
+          <div class="log live-box" id="liveText">等待中...</div>
+          <div class="output-area">
+            <label style="margin-top: 12px;" data-i18n="output">输出</label>
+            <div class="chat" id="bubbleWrap"></div>
+            <div id="logSection" style="display: none; flex: 1; flex-direction: column; min-height: 0;">
+              <div class="log log-fill" id="log"></div>
+            </div>
+          </div>
+          <div style="margin-top: 12px;">
+            <label>
+              <input id="advancedLog" type="checkbox" style="width: auto; margin-right: 8px;" />
+              <span data-i18n="advanced_log">高级日志模式</span>
+            </label>
+          </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="page">
+        <div class="wrap">
+          <h1 data-i18n="title_extra">小功能区</h1>
+          <div class="card">
+            <div class="row">
+              <div>
+                <label data-i18n="prefix_label">前缀（可多个，随机挑选，用逗号分割）</label>
+                <input id="prefixInput" type="text" placeholder="例如：[翻译], [字幕]" data-i18n-placeholder="prefix_ph" />
+              </div>
+              <div>
+                <label data-i18n="suffix_label">后缀（可多个，随机挑选，用逗号分割）</label>
+                <input id="suffixInput" type="text" placeholder="例如：(完), (结束)" data-i18n-placeholder="suffix_ph" />
+              </div>
+            </div>
+            <div style="margin-top: 12px;">
+              <label data-i18n="block_label">违禁词（命中即停止发送/结束本次会话，逗号或换行分隔）</label>
+              <textarea id="blockList" rows="4" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #f5c2d1; background: #fff0f5; color: var(--text);" data-i18n-placeholder="block_ph"></textarea>
+            </div>
+            <div style="margin-top: 12px;">
+              <label data-i18n="replace_label">关键词替换（每行：关键词1,关键词2 => 替换文本）</label>
+              <textarea id="replaceList" rows="4" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #f5c2d1; background: #fff0f5; color: var(--text);" data-i18n-placeholder="replace_ph"></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const logEl = document.getElementById("log");
+      const liveEl = document.getElementById("liveText");
+      const statusBadge = document.getElementById("statusBadge");
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const bubbleWrap = document.getElementById("bubbleWrap");
+      const logSection = document.getElementById("logSection");
+      const advancedLogEl = document.getElementById("advancedLog");
+      const prefixEl = document.getElementById("prefixInput");
+      const suffixEl = document.getElementById("suffixInput");
+      const blockListEl = document.getElementById("blockList");
+      const replaceListEl = document.getElementById("replaceList");
+      const sessionSoundEl = document.getElementById("sessionSound");
+      const keepPunctEl = document.getElementById("keepPunct");
+      const uiLangEl = document.getElementById("uiLang");
+
+      const oscAddressEl = document.getElementById("oscAddress");
+      const oscPortEl = document.getElementById("oscPort");
+      const langEl = document.getElementById("lang");
+      const wsPortEl = document.getElementById("wsPort");
+      let sendInterimEl = null;
+      let silenceStopEl = null;
+      let finalHoldEl = null;
+      let thresholdEl = null;
+      let meterEl = null;
+      let markerEl = null;
+      let thresholdValueEl = null;
+      let rmsValueEl = null;
+
+      const params = new URLSearchParams(window.location.search);
+      oscAddressEl.value = params.get("osc_address") || "127.0.0.1";
+      oscPortEl.value = params.get("osc_port") || "9000";
+      langEl.value = params.get("lang") || "zh-CN";
+      wsPortEl.value = params.get("ws_port") || "8765";
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      let recognition = null;
+      let featureEnabled = false;
+      let recognizing = false;
+      let ws = null;
+      let typingTimer = null;
+      const INTERIM_INTERVAL_MS = 1000;
+      const CHATBOX_MIN_INTERVAL_MS = 1200;
+      let lastInterimAt = 0;
+      let lastInterimText = "";
+      let silenceTimer = null;
+      let lastActivityAt = 0;
+      let holdTimer = null;
+      let pauseInterimUntil = 0;
+      let lastSendAt = 0;
+      let sendTimer = null;
+      let pendingFinal = null;
+      let pendingPartial = null;
+      let lastSentText = "";
+      let sessionActive = false;
+      let sessionText = "";
+      let sessionBubble = null;
+      let sessionBubbleBody = null;
+      let typingActive = false;
+      let blockedTriggered = false;
+      let sessionPrefix = "";
+      let sessionSuffix = "";
+      let inSound = null;
+      let outSound = null;
+      let micStream = null;
+      let audioContext = null;
+      let analyser = null;
+      let audioData = null;
+      let monitoring = false;
+      let cooldownUntil = 0;
+      let statusKey = "status_off";
+      let replaceRules = [];
+
+      const I18N = {
+        "zh-CN": {
+          title_main: "Rabbit Translator",
+          title_extra: "小功能区",
+          osc_address: "OSC 地址",
+          osc_port: "OSC 端口",
+          recog_lang: "识别语言",
+          ui_lang: "界面语言",
+          ws_port: "WebSocket 端口",
+          silence_stop: "静音停止（秒）",
+          final_hold: "最终文本停留（秒）",
+          keep_punct: "保留句末标点",
+          input_level: "输入音量",
+          threshold_label: "阈值：",
+          current_label: "当前：",
+          start: "开始",
+          stop: "停止",
+          send_realtime: "发送实时文本到 VRChat（每秒 1 次）",
+          session_sound: "开启会话提示音",
+          need_webspeech: "需要 Web Speech API（建议 Chrome/Edge）",
+          live_text: "实时文本",
+          output: "输出",
+          log: "日志",
+          advanced_log: "高级日志模式",
+          prefix_label: "前缀（可多个，随机挑选，用逗号分割）",
+          suffix_label: "后缀（可多个，随机挑选，用逗号分割）",
+          block_label: "违禁词（命中即停止发送/结束本次会话，逗号或换行分隔）",
+          replace_label: "关键词替换（每行：关键词1,关键词2 => 替换文本）",
+          prefix_ph: "例如：[翻译], [字幕]",
+          suffix_ph: "例如：(完), (结束)",
+          block_ph: "例如：禁止词, 违禁词",
+          replace_ph: "例如：你好,您好 => 你们好",
+          status_off: "状态：已关闭",
+          status_wait: "状态：已开启（等待语音）",
+          status_listen: "状态：已开启（识别中）",
+          status_nosupport: "状态：不支持 Web Speech",
+          blocked_meta: "已拦截（命中：{word}）",
+        },
+        "zh-TW": {
+          title_main: "Rabbit Translator",
+          title_extra: "小功能區",
+          osc_address: "OSC 位址",
+          osc_port: "OSC 連接埠",
+          recog_lang: "辨識語言",
+          ui_lang: "介面語言",
+          ws_port: "WebSocket 連接埠",
+          silence_stop: "靜音停止（秒）",
+          final_hold: "最終文字停留（秒）",
+          keep_punct: "保留句末標點",
+          input_level: "輸入音量",
+          threshold_label: "門檻：",
+          current_label: "目前：",
+          start: "開始",
+          stop: "停止",
+          send_realtime: "傳送即時文字到 VRChat（每秒 1 次）",
+          session_sound: "啟用會話提示音",
+          need_webspeech: "需要 Web Speech API（建議 Chrome/Edge）",
+          live_text: "即時文字",
+          output: "輸出",
+          log: "日誌",
+          advanced_log: "進階日誌模式",
+          prefix_label: "前綴（可多個，隨機挑選，用逗號分隔）",
+          suffix_label: "後綴（可多個，隨機挑選，用逗號分隔）",
+          block_label: "禁用詞（命中即停止傳送/結束本次會話，逗號或換行分隔）",
+          replace_label: "關鍵字替換（每行：關鍵字1,關鍵字2 => 替換文字）",
+          prefix_ph: "例如：[翻譯], [字幕]",
+          suffix_ph: "例如：(完), (結束)",
+          block_ph: "例如：禁止詞, 違禁詞",
+          replace_ph: "例如：你好,您好 => 你們好",
+          status_off: "狀態：已關閉",
+          status_wait: "狀態：已開啟（等待語音）",
+          status_listen: "狀態：已開啟（辨識中）",
+          status_nosupport: "狀態：不支援 Web Speech",
+          blocked_meta: "已攔截（命中：{word}）",
+        },
+        "en-US": {
+          title_main: "Rabbit Translator",
+          title_extra: "Extras",
+          osc_address: "OSC Address",
+          osc_port: "OSC Port",
+          recog_lang: "Recognition Language",
+          ui_lang: "UI Language",
+          ws_port: "WebSocket Port",
+          silence_stop: "Silence Stop (sec)",
+          final_hold: "Final Hold (sec)",
+          keep_punct: "Keep ending punctuation",
+          input_level: "Input Level",
+          threshold_label: "Threshold: ",
+          current_label: "Current: ",
+          start: "Start",
+          stop: "Stop",
+          send_realtime: "Send realtime text to VRChat (1/sec)",
+          session_sound: "Session sounds",
+          need_webspeech: "Web Speech API required (Chrome/Edge)",
+          live_text: "Live Text",
+          output: "Output",
+          log: "Log",
+          advanced_log: "Advanced log mode",
+          prefix_label: "Prefix (multiple, random, split by comma)",
+          suffix_label: "Suffix (multiple, random, split by comma)",
+          block_label: "Block list (match stops send/session, comma or newline)",
+          replace_label: "Keyword replace (each line: k1,k2 => text)",
+          prefix_ph: "e.g. [TL], [Sub]",
+          suffix_ph: "e.g. (end), (done)",
+          block_ph: "e.g. banned, blocked",
+          replace_ph: "e.g. hello,hi => hey",
+          status_off: "Status: Off",
+          status_wait: "Status: On (waiting)",
+          status_listen: "Status: On (listening)",
+          status_nosupport: "Status: Web Speech not supported",
+          blocked_meta: "Blocked (match: {word})",
+        },
+        "ja-JP": {
+          title_main: "Rabbit Translator",
+          title_extra: "小機能",
+          osc_address: "OSC アドレス",
+          osc_port: "OSC ポート",
+          recog_lang: "認識言語",
+          ui_lang: "UI 言語",
+          ws_port: "WebSocket ポート",
+          silence_stop: "無音停止（秒）",
+          final_hold: "最終テキスト保持（秒）",
+          keep_punct: "文末の記号を保持",
+          input_level: "入力音量",
+          threshold_label: "しきい値：",
+          current_label: "現在：",
+          start: "開始",
+          stop: "停止",
+          send_realtime: "リアルタイム文字を送信（1秒に1回）",
+          session_sound: "セッション効果音",
+          need_webspeech: "Web Speech API が必要（Chrome/Edge 推奨）",
+          live_text: "リアルタイム文字",
+          output: "出力",
+          log: "ログ",
+          advanced_log: "詳細ログモード",
+          prefix_label: "接頭辞（複数可・ランダム・カンマ区切り）",
+          suffix_label: "接尾辞（複数可・ランダム・カンマ区切り）",
+          block_label: "禁止語（一致で送信停止・会話終了）",
+          replace_label: "キーワード置換（1行：語1,語2 => 置換）",
+          prefix_ph: "例：[翻訳], [字幕]",
+          suffix_ph: "例：(終), (完了)",
+          block_ph: "例：禁止語, NG",
+          replace_ph: "例：こんにちは,やあ => やっほー",
+          status_off: "状態：オフ",
+          status_wait: "状態：オン（待機中）",
+          status_listen: "状態：オン（認識中）",
+          status_nosupport: "状態：Web Speech 非対応",
+          blocked_meta: "ブロック（一致：{word}）",
+        },
+        "ko-KR": {
+          title_main: "Rabbit Translator",
+          title_extra: "부가기능",
+          osc_address: "OSC 주소",
+          osc_port: "OSC 포트",
+          recog_lang: "인식 언어",
+          ui_lang: "UI 언어",
+          ws_port: "WebSocket 포트",
+          silence_stop: "무음 정지(초)",
+          final_hold: "최종 텍스트 유지(초)",
+          keep_punct: "문장 끝 기호 유지",
+          input_level: "입력 음량",
+          threshold_label: "임계값: ",
+          current_label: "현재: ",
+          start: "시작",
+          stop: "정지",
+          send_realtime: "실시간 텍스트 전송(1초 1회)",
+          session_sound: "세션 효과음",
+          need_webspeech: "Web Speech API 필요(Chrome/Edge 권장)",
+          live_text: "실시간 텍스트",
+          output: "출력",
+          log: "로그",
+          advanced_log: "고급 로그 모드",
+          prefix_label: "접두사(여러 개, 랜덤, 쉼표 구분)",
+          suffix_label: "접미사(여러 개, 랜덤, 쉼표 구분)",
+          block_label: "차단어(일치 시 전송 중지/세션 종료)",
+          replace_label: "키워드 치환(한 줄: 키1,키2 => 치환)",
+          prefix_ph: "예: [번역], [자막]",
+          suffix_ph: "예: (끝), (완료)",
+          block_ph: "예: 금지어, 차단",
+          replace_ph: "예: 안녕,안녕하세요 => 여러분 안녕",
+          status_off: "상태: 꺼짐",
+          status_wait: "상태: 켜짐(대기)",
+          status_listen: "상태: 켜짐(인식 중)",
+          status_nosupport: "상태: Web Speech 미지원",
+          blocked_meta: "차단됨(일치: {word})",
+        },
+      };
+
+      function pickUiLang() {
+        const saved = localStorage.getItem("rabbit_ui_lang");
+        if (saved && I18N[saved]) return saved;
+        const nav = (navigator.language || "zh-CN").toLowerCase();
+        const candidates = Object.keys(I18N);
+        const hit = candidates.find((k) => k.toLowerCase() === nav) || candidates.find((k) => nav.startsWith(k.split("-")[0]));
+        return hit || "zh-CN";
+      }
+
+      function t(key) {
+        const lang = uiLangEl && uiLangEl.value ? uiLangEl.value : "zh-CN";
+        return (I18N[lang] && I18N[lang][key]) || I18N["zh-CN"][key] || key;
+      }
+
+      function setStatusKey(key) {
+        statusKey = key;
+        statusBadge.textContent = t(key);
+      }
+
+      function applyI18n() {
+        const lang = uiLangEl && uiLangEl.value ? uiLangEl.value : "zh-CN";
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const k = el.getAttribute("data-i18n");
+          if (!k) return;
+          const text = (I18N[lang] && I18N[lang][k]) || I18N["zh-CN"][k];
+          if (text) el.textContent = text;
+        });
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+          const k = el.getAttribute("data-i18n-placeholder");
+          if (!k) return;
+          const text = (I18N[lang] && I18N[lang][k]) || I18N["zh-CN"][k];
+          if (text) el.setAttribute("placeholder", text);
+        });
+        setStatusKey(statusKey);
+      }
+
+      function isAdvanced() {
+        return !!(advancedLogEl && advancedLogEl.checked);
+      }
+
+      function log(msg) {
+        if (!isAdvanced()) return;
+        const ts = new Date().toLocaleTimeString();
+        logEl.textContent += `[${ts}] ${msg}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function setStatus(text) {
+        statusBadge.textContent = `状态：${text}`;
+      }
+
+      function addBubble(text) {
+        if (!bubbleWrap) return;
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        const time = document.createElement("div");
+        time.className = "bubble-time";
+        time.textContent = new Date().toLocaleTimeString();
+        const body = document.createElement("div");
+        body.textContent = text;
+        bubble.appendChild(time);
+        bubble.appendChild(body);
+        bubbleWrap.appendChild(bubble);
+        bubbleWrap.scrollTop = bubbleWrap.scrollHeight;
+      }
+
+      function addBlockedBubble(text, matched) {
+        if (!bubbleWrap) return;
+        const bubble = document.createElement("div");
+        bubble.className = "bubble bubble--blocked";
+        const time = document.createElement("div");
+        time.className = "bubble-time";
+        time.textContent = new Date().toLocaleTimeString();
+        bubble.appendChild(time);
+        const meta = document.createElement("div");
+        meta.className = "bubble-meta";
+        meta.textContent = t("blocked_meta").replace("{word}", matched);
+        const body = document.createElement("div");
+        body.textContent = text;
+        bubble.appendChild(meta);
+        bubble.appendChild(body);
+        bubbleWrap.appendChild(bubble);
+        bubbleWrap.scrollTop = bubbleWrap.scrollHeight;
+      }
+
+      function updateLogMode() {
+        if (!logSection || !bubbleWrap) return;
+        if (isAdvanced()) {
+          logSection.style.display = "flex";
+          bubbleWrap.style.display = "none";
+        } else {
+          logSection.style.display = "none";
+          bubbleWrap.style.display = "flex";
+        }
+      }
+
+      function startSession() {
+        if (sessionActive) return;
+        sessionActive = true;
+        sessionText = "";
+        sessionBubble = null;
+        sessionBubbleBody = null;
+        blockedTriggered = false;
+        sessionPrefix = pickRandom(getPrefixList());
+        sessionSuffix = pickRandom(getSuffixList());
+        playSessionSound(true);
+        startTyping();
+      }
+
+      function parseList(text) {
+        if (!text) return [];
+        return text
+          .split(/[\n,，;；]/)
+          .map((t) => t.trim())
+          .filter(Boolean);
+      }
+
+      function updateReplaceRules() {
+        replaceRules = [];
+        const raw = (replaceListEl && replaceListEl.value ? replaceListEl.value : "").trim();
+        if (!raw) return;
+        const lines = raw.split(/\r?\n/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          const match = trimmed.match(/^(.*?)(?:=>|->|=|＝)(.*)$/);
+          if (!match) continue;
+          const left = match[1].trim();
+          const right = match[2].trim();
+          const keys = parseList(left);
+          if (!keys.length) continue;
+          replaceRules.push({ keys, value: right });
+        }
+      }
+
+      function applyReplacements(text) {
+        if (!text) return "";
+        if (!replaceRules.length) return text;
+        let out = text;
+        for (const rule of replaceRules) {
+          for (const key of rule.keys) {
+            if (!key) continue;
+            out = out.split(key).join(rule.value);
+          }
+        }
+        return out;
+      }
+
+      function stripTrailingPunct(text) {
+        let out = (text || "").trim();
+        if (!out) return "";
+        out = out.replace(/[。！？!?.,，、；;:：]+$/u, "");
+        return out.trim();
+      }
+
+      function keepPunctEnabled() {
+        return !keepPunctEl || keepPunctEl.checked;
+      }
+
+      function pickRandom(list) {
+        if (!list.length) return "";
+        return list[Math.floor(Math.random() * list.length)];
+      }
+
+      function getPrefixList() {
+        return parseList(prefixEl && prefixEl.value ? prefixEl.value : "");
+      }
+
+      function getSuffixList() {
+        return parseList(suffixEl && suffixEl.value ? suffixEl.value : "");
+      }
+
+      function applyAffixes(text, includeSuffix) {
+        const core = (text || "").trim();
+        if (!core) return "";
+        const prefix = sessionPrefix || "";
+        const suffix = sessionSuffix || "";
+        let result = core;
+        if (prefix) result = `${prefix} ${result}`.trim();
+        if (includeSuffix && suffix) result = `${result} ${suffix}`.trim();
+        return result;
+      }
+
+      function appendFinalText(text) {
+        if (!text) return;
+        if (!sessionActive) startSession();
+        sessionText = sessionText ? `${sessionText} ${text}` : text;
+        const out = applyAffixes(sessionText, false);
+        if (out) {
+          queueFinal(out);
+        }
+        if (isAdvanced()) {
+          log(`最终结果：${text}`);
+        } else {
+          if (!sessionBubble) {
+            sessionBubble = document.createElement("div");
+            sessionBubble.className = "bubble";
+            const time = document.createElement("div");
+            time.className = "bubble-time";
+            time.textContent = new Date().toLocaleTimeString();
+            sessionBubbleBody = document.createElement("div");
+            sessionBubble.appendChild(time);
+            sessionBubble.appendChild(sessionBubbleBody);
+            bubbleWrap.appendChild(sessionBubble);
+          }
+          if (sessionBubbleBody) {
+            sessionBubbleBody.textContent = applyAffixes(sessionText, false) || sessionText;
+          } else {
+            sessionBubble.textContent = applyAffixes(sessionText, false) || sessionText;
+          }
+          bubbleWrap.scrollTop = bubbleWrap.scrollHeight;
+        }
+      }
+
+      function composeLiveText(interim) {
+        const trimmed = interim.trim();
+        if (!sessionText) return trimmed;
+        if (!trimmed) return sessionText;
+        return `${sessionText} ${trimmed}`.trim();
+      }
+
+      function getBlockedList() {
+        const raw = (blockListEl && blockListEl.value ? blockListEl.value : "").trim();
+        if (!raw) return [];
+        return parseList(raw);
+      }
+
+      function findBlocked(text) {
+        const list = getBlockedList();
+        if (!list.length) return null;
+        const hay = text.toLowerCase();
+        for (const w of list) {
+          if (w && hay.includes(w.toLowerCase())) return w;
+        }
+        return null;
+      }
+
+      function abortSession(reasonText, matched) {
+        if (blockedTriggered) return;
+        blockedTriggered = true;
+        pendingFinal = null;
+        pendingPartial = null;
+        lastSentText = "";
+        addBlockedBubble(reasonText, matched || "未知");
+        if (isAdvanced()) {
+          log(`违禁词命中：${matched}`);
+        }
+        sessionActive = false;
+        stopTyping();
+        stopSilenceTimer();
+        stopHoldSend();
+        if (recognition) recognition.stop();
+        sessionText = "";
+        sessionBubble = null;
+      }
+
+      function endSession() {
+        if (!sessionActive) return;
+        sessionActive = false;
+        playSessionSound(false);
+        stopTyping();
+        stopSilenceTimer();
+        if (recognition) recognition.stop();
+        if (sessionText.trim().length > 0) {
+          let core = sessionText.trim();
+          if (!keepPunctEnabled()) {
+            core = stripTrailingPunct(core);
+          }
+          const finalOut = applyAffixes(core, true);
+          if (finalOut) {
+            queueFinal(finalOut);
+            if (!isAdvanced() && sessionBubble) {
+              if (sessionBubbleBody) {
+                sessionBubbleBody.textContent = finalOut;
+              } else {
+                sessionBubble.textContent = finalOut;
+              }
+              bubbleWrap.scrollTop = bubbleWrap.scrollHeight;
+            }
+          }
+          scheduleHoldSend();
+        }
+        sessionText = "";
+        sessionBubble = null;
+        sessionBubbleBody = null;
+        sessionPrefix = "";
+        sessionSuffix = "";
+      }
+
+      function connectWs() {
+        const port = wsPortEl.value.trim();
+        ws = new WebSocket(`ws://127.0.0.1:${port}`);
+        ws.onopen = () => {
+          log("WebSocket 已连接。");
+          sendConfig();
+        };
+        ws.onclose = () => log("WebSocket 已断开。");
+        ws.onerror = () => log("WebSocket 错误。");
+      }
+
+      function sendConfig() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(
+          JSON.stringify({
+            type: "config",
+            osc_address: oscAddressEl.value.trim(),
+            osc_port: parseInt(oscPortEl.value.trim(), 10) || 9000,
+            language: langEl.value,
+            silence_stop_sec: parseFloat(silenceStopEl.value || "0") || 0,
+            final_hold_sec: parseFloat(finalHoldEl.value || "0") || 0,
+            voice_threshold: (parseFloat(thresholdEl.value || "2") || 2) / 100,
+          })
+        );
+      }
+
+      function sendTyping(value = true) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({ type: "typing", value: !!value }));
+      }
+
+      function startTyping() {
+        if (typingActive) return;
+        typingActive = true;
+        sendTyping(true);
+        typingTimer = setInterval(() => sendTyping(true), 1500);
+      }
+
+      function stopTyping() {
+        typingActive = false;
+        if (typingTimer) clearInterval(typingTimer);
+        typingTimer = null;
+        sendTyping(false);
+      }
+
+      function queueFinal(text) {
+        pendingFinal = text;
+        pendingPartial = null;
+        pumpSend();
+      }
+
+      function queuePartial(text) {
+        if (text === lastSentText) return;
+        pendingPartial = text;
+        pumpSend();
+      }
+
+      function pumpSend() {
+        if (sendTimer) return;
+        const now = Date.now();
+        const wait = Math.max(0, CHATBOX_MIN_INTERVAL_MS - (now - lastSendAt));
+        sendTimer = setTimeout(() => {
+          sendTimer = null;
+          if (!ws || ws.readyState !== WebSocket.OPEN) return;
+          let type = null;
+          let text = null;
+          if (pendingFinal !== null) {
+            type = "final";
+            text = pendingFinal;
+            pendingFinal = null;
+          } else if (pendingPartial !== null) {
+            type = "partial";
+            text = pendingPartial;
+            pendingPartial = null;
+          } else {
+            return;
+          }
+          ws.send(JSON.stringify({ type, text }));
+          lastSendAt = Date.now();
+          lastSentText = text || "";
+          pumpSend();
+        }, wait);
+      }
+
+      function sendClear() {
+        queueFinal("");
+        setTimeout(() => queueFinal(" "), 300);
+        setTimeout(() => queueFinal(""), 600);
+      }
+
+      function startRecognition() {
+        if (!SpeechRecognition) return;
+        if (!ws || ws.readyState !== WebSocket.OPEN) connectWs();
+
+        if (recognizing) return;
+        stopHoldSend();
+        lastInterimText = "";
+        recognition = new SpeechRecognition();
+        recognition.lang = langEl.value;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+          recognizing = true;
+          setStatusKey("status_listen");
+          lastActivityAt = Date.now();
+          startSession();
+          startSilenceTimer();
+          log("开始识别。");
+        };
+
+        recognition.onresult = (event) => {
+          let interim = "";
+          let finalText = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i];
+            if (result.isFinal) {
+              finalText += result[0].transcript;
+            } else {
+              interim += result[0].transcript;
+            }
+          }
+          if (interim) {
+            lastActivityAt = Date.now();
+            const interimCore = applyReplacements(interim);
+            const combined = composeLiveText(interimCore);
+            const blocked = findBlocked(combined);
+            if (blocked) {
+              liveEl.textContent = combined;
+              abortSession(combined, blocked);
+              return;
+            }
+            const outInterim = applyAffixes(combined, false) || combined || interimCore;
+            liveEl.textContent = outInterim;
+            const now = Date.now();
+            const trimmed = outInterim.trim();
+            if (
+              sendInterimEl &&
+              sendInterimEl.checked &&
+              trimmed &&
+              trimmed !== lastInterimText &&
+              now >= pauseInterimUntil &&
+              now - lastInterimAt >= INTERIM_INTERVAL_MS
+            ) {
+              lastInterimAt = now;
+              lastInterimText = trimmed;
+              queuePartial(trimmed);
+              log(`实时结果：${trimmed}`);
+            }
+          }
+          if (finalText) {
+            lastActivityAt = Date.now();
+            const finalCore = applyReplacements(finalText.trim());
+            const combinedFinal = composeLiveText(finalCore);
+            const blocked = findBlocked(combinedFinal);
+            if (blocked) {
+              liveEl.textContent = combinedFinal;
+              abortSession(combinedFinal, blocked);
+              return;
+            }
+            liveEl.textContent = applyAffixes(combinedFinal, false) || combinedFinal;
+            appendFinalText(finalCore);
+            lastInterimText = "";
+            pauseInterimUntil = Date.now() + 1200;
+          }
+        };
+
+        recognition.onerror = (event) => {
+          log(`识别错误：${event.error}`);
+        };
+
+        recognition.onend = () => {
+          recognizing = false;
+          cooldownUntil = Date.now() + 700;
+          if (featureEnabled) {
+            setStatusKey("status_wait");
+          } else {
+            setStatusKey("status_off");
+          }
+        };
+
+        recognition.start();
+      }
+
+      function stopRecognition() {
+        featureEnabled = false;
+        endSession();
+        if (recognition) recognition.stop();
+        recognizing = false;
+        setStatusKey("status_off");
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        log("已停止识别。");
+        stopAudioMonitor();
+      }
+
+      function startSilenceTimer() {
+        stopSilenceTimer();
+        const sec = parseFloat(silenceStopEl.value || "0") || 0;
+        if (sec <= 0) return;
+        silenceTimer = setInterval(() => {
+          if (!featureEnabled || !sessionActive) return;
+          if (Date.now() - lastActivityAt > sec * 1000) {
+            log(`已静音 ${sec}s，结束本次识别。`);
+            endSession();
+          }
+        }, 300);
+      }
+
+      function stopSilenceTimer() {
+        if (silenceTimer) clearInterval(silenceTimer);
+        silenceTimer = null;
+      }
+
+      function scheduleHoldSend() {
+        stopHoldSend();
+        const sec = parseFloat(finalHoldEl.value || "0") || 0;
+        if (sec <= 0) return;
+        holdTimer = setTimeout(() => {
+          sendClear();
+          stopHoldSend();
+        }, sec * 1000);
+      }
+
+      function stopHoldSend() {
+        if (holdTimer) clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+
+      startBtn.addEventListener("click", () => {
+        if (!SpeechRecognition) return;
+        featureEnabled = true;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        setStatusKey("status_wait");
+        startAudioMonitor();
+      });
+      stopBtn.addEventListener("click", stopRecognition);
+      oscAddressEl.addEventListener("change", sendConfig);
+      oscPortEl.addEventListener("change", sendConfig);
+      langEl.addEventListener("change", sendConfig);
+      wsPortEl.addEventListener("change", () => {
+        if (ws) ws.close();
+        connectWs();
+      });
+
+      sendInterimEl = document.getElementById("sendInterim");
+      sendInterimEl.addEventListener("change", () => {
+        localStorage.setItem("rabbit_send_interim", sendInterimEl.checked ? "1" : "0");
+      });
+
+      const savedInterim = localStorage.getItem("rabbit_send_interim");
+      if (savedInterim !== null) {
+        sendInterimEl.checked = savedInterim === "1";
+      }
+
+      silenceStopEl = document.getElementById("silenceStop");
+      finalHoldEl = document.getElementById("finalHold");
+      silenceStopEl.addEventListener("change", () => {
+        if (recognizing) startSilenceTimer();
+        sendConfig();
+      });
+      thresholdEl = document.getElementById("voiceThreshold");
+      meterEl = document.getElementById("voiceMeter");
+      markerEl = document.getElementById("thresholdMarker");
+      thresholdValueEl = document.getElementById("thresholdValue");
+      rmsValueEl = document.getElementById("rmsValue");
+      thresholdEl.addEventListener("change", () => {
+        sendConfig();
+      });
+      thresholdEl.addEventListener("input", () => {
+        updateThresholdUI();
+        sendConfig();
+      });
+      finalHoldEl.addEventListener("change", sendConfig);
+
+      silenceStopEl.value = params.get("silence_stop_sec") || "4";
+      finalHoldEl.value = params.get("final_hold_sec") || "10";
+      thresholdEl.value = ((parseFloat(params.get("voice_threshold")) || 0.02) * 100).toFixed(1);
+      updateThresholdUI();
+
+      prefixEl.value = localStorage.getItem("rabbit_prefix") || "";
+      suffixEl.value = localStorage.getItem("rabbit_suffix") || "";
+      blockListEl.value = localStorage.getItem("rabbit_block_list") || "";
+      replaceListEl.value = localStorage.getItem("rabbit_replace_list") || "";
+      sessionSoundEl.checked = localStorage.getItem("rabbit_session_sound") === "1";
+      const savedKeepPunct = localStorage.getItem("rabbit_keep_punct");
+      if (savedKeepPunct !== null && keepPunctEl) {
+        keepPunctEl.checked = savedKeepPunct === "1";
+      }
+      uiLangEl.value = pickUiLang();
+      applyI18n();
+      updateReplaceRules();
+      const saveExtras = () => {
+        localStorage.setItem("rabbit_prefix", prefixEl.value || "");
+        localStorage.setItem("rabbit_suffix", suffixEl.value || "");
+        localStorage.setItem("rabbit_block_list", blockListEl.value || "");
+        localStorage.setItem("rabbit_replace_list", replaceListEl.value || "");
+        localStorage.setItem("rabbit_session_sound", sessionSoundEl.checked ? "1" : "0");
+      };
+      prefixEl.addEventListener("input", saveExtras);
+      suffixEl.addEventListener("input", saveExtras);
+      blockListEl.addEventListener("input", saveExtras);
+      replaceListEl.addEventListener("input", () => {
+        saveExtras();
+        updateReplaceRules();
+      });
+      sessionSoundEl.addEventListener("change", saveExtras);
+      if (keepPunctEl) {
+        keepPunctEl.addEventListener("change", () => {
+          localStorage.setItem("rabbit_keep_punct", keepPunctEl.checked ? "1" : "0");
+        });
+      }
+      uiLangEl.addEventListener("change", () => {
+        localStorage.setItem("rabbit_ui_lang", uiLangEl.value);
+        applyI18n();
+      });
+
+      advancedLogEl.addEventListener("change", () => {
+        localStorage.setItem("rabbit_adv_log", advancedLogEl.checked ? "1" : "0");
+        updateLogMode();
+      });
+      const advSaved = localStorage.getItem("rabbit_adv_log");
+      if (advSaved !== null) {
+        advancedLogEl.checked = advSaved === "1";
+      }
+      updateLogMode();
+
+      if (!SpeechRecognition) {
+        statusBadge.classList.add("error");
+        setStatusKey("status_nosupport");
+      } else {
+        setStatusKey("status_off");
+      }
+
+      connectWs();
+
+      document.addEventListener("contextmenu", (e) => e.preventDefault());
+      document.addEventListener("keydown", (e) => {
+        const key = e.key.toLowerCase();
+        if (key === "f12") e.preventDefault();
+        if (e.ctrlKey && e.shiftKey && (key === "i" || key === "j" || key === "c")) e.preventDefault();
+        if (e.ctrlKey && key === "u") e.preventDefault();
+      });
+
+      async function resumeAudioIfNeeded() {
+        if (!audioContext) return;
+        if (audioContext.state === "suspended") {
+          try {
+            await audioContext.resume();
+          } catch {}
+        }
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+          resumeAudioIfNeeded();
+        }
+      });
+      window.addEventListener("focus", () => {
+        resumeAudioIfNeeded();
+      });
+
+      async function startAudioMonitor() {
+        if (monitoring) return;
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          await audioContext.resume();
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 2048;
+          const source = audioContext.createMediaStreamSource(micStream);
+          source.connect(analyser);
+          audioData = new Uint8Array(analyser.fftSize);
+          monitoring = true;
+          monitorLoop();
+          log("麦克风已开启，等待语音触发。");
+        } catch (e) {
+          log("麦克风权限失败或不可用。");
+          featureEnabled = false;
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+          setStatus("已关闭");
+        }
+      }
+
+      function stopAudioMonitor() {
+        monitoring = false;
+        if (micStream) {
+          micStream.getTracks().forEach((t) => t.stop());
+          micStream = null;
+        }
+        if (audioContext) {
+          audioContext.close();
+          audioContext = null;
+        }
+      }
+
+      function monitorLoop() {
+        if (!monitoring || !analyser || !audioData) return;
+        analyser.getByteTimeDomainData(audioData);
+        let sum = 0;
+        for (let i = 0; i < audioData.length; i++) {
+          const v = (audioData[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / audioData.length);
+        if (meterEl) {
+          const pct = Math.min(100, Math.round(rms * 100));
+          meterEl.style.width = `${pct}%`;
+        }
+        if (rmsValueEl) {
+          const pct = Math.min(100, rms * 100);
+          rmsValueEl.textContent = `${pct.toFixed(1)}%`;
+        }
+        const threshold = (parseFloat(thresholdEl.value || "2") || 2) / 100;
+        if (rms >= threshold) {
+          lastActivityAt = Date.now();
+        }
+        if (
+          featureEnabled &&
+          !recognizing &&
+          Date.now() > cooldownUntil &&
+          rms >= threshold
+        ) {
+          startRecognition();
+        }
+        requestAnimationFrame(monitorLoop);
+      }
+
+      function updateThresholdUI() {
+        const threshold = parseFloat(thresholdEl.value || "2") || 2;
+        if (thresholdValueEl) {
+          thresholdValueEl.textContent = `${threshold.toFixed(1)}%`;
+        }
+        if (markerEl) {
+          const max = parseFloat(thresholdEl.max || "100") || 100;
+          const pct = Math.min(100, Math.max(0, (threshold / max) * 100));
+          markerEl.style.left = `calc(${pct}% - 1px)`;
+        }
+      }
+
+      function playSessionSound(isStart) {
+        if (!sessionSoundEl || !sessionSoundEl.checked) return;
+        try {
+          if (!inSound) inSound = new Audio("in.mp3");
+          if (!outSound) outSound = new Audio("out.mp3");
+          const sound = isStart ? inSound : outSound;
+          sound.volume = 0.5;
+          sound.currentTime = 0;
+          sound.play().catch(() => {});
+        } catch {}
+      }
+    </script>
+  </body>
+</html>
