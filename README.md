@@ -22,7 +22,7 @@
 - VRChat 已开启 OSC
 
 ## 快速开始
-1. 下载Release版本Zip
+1. [下载Release版本Zip](https://github.com/chiooone/Rabbit-Translator/releases)
 
 2. 解压并运行 RabbitTranslator.exe （如果有杀毒软件可能会有警报）
 
