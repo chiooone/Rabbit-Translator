@@ -48,3 +48,9 @@
 请确认 `config.json` 中端口未被占用，必要时更换端口并重启。
 
 如需更多功能或自定义，欢迎提交 Issue 或 PR。
+
+## 诶嘿 喜欢的话 求支持~
+
+<img src="https://github.com/user-attachments/assets/2b7344a9-7cb6-43ad-a133-731480366743" 
+     alt="9CB2571B77496F012E141F55899816A4" 
+     width="400">
