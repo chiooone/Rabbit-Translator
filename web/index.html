@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rabbit Translator 1.0.0</title>
+    <title>Rabbit Translator 1.0.1</title>
     <link rel="icon" href="icon.png" />
     <style>
       :root {
@@ -773,6 +773,8 @@
         sessionSuffix = pickRandom(getSuffixList());
         playSessionSound(true);
         startTyping();
+        lastActivityAt = Date.now();
+        startSilenceTimer();
       }
 
       function parseList(text) {
@@ -928,7 +930,6 @@
         playSessionSound(false);
         stopTyping();
         stopSilenceTimer();
-        if (recognition) recognition.stop();
         if (sessionText.trim().length > 0) {
           let core = sessionText.trim();
           if (!keepPunctEnabled()) {
@@ -1060,9 +1061,6 @@
         recognition.onstart = () => {
           recognizing = true;
           setStatusKey("status_listen");
-          lastActivityAt = Date.now();
-          startSession();
-          startSilenceTimer();
           log("开始识别。");
         };
 
@@ -1078,6 +1076,7 @@
             }
           }
           if (interim) {
+            if (!sessionActive) startSession();
             lastActivityAt = Date.now();
             const interimCore = applyReplacements(interim);
             const combined = composeLiveText(interimCore);
@@ -1190,6 +1189,7 @@
         startBtn.disabled = true;
         stopBtn.disabled = false;
         setStatusKey("status_wait");
+        startRecognition();
         startAudioMonitor();
       });
       stopBtn.addEventListener("click", stopRecognition);
